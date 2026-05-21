@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medilife - AI Disease Diagnosis</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; }
+        
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 15px 30px;
+            color: white;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        .navbar h1 { font-size: 28px; font-weight: 700; }
+        .navbar p { font-size: 14px; opacity: 0.8; margin-left: 15px; }
+
+        .hero {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-align: center;
+            padding: 60px 20px;
+        }
+        .hero h2 { font-size: 42px; font-weight: 700; margin-bottom: 15px; }
+        .hero p { font-size: 18px; opacity: 0.9; }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 40px 20px; }
+        
+        .disease-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+        }
+
+        .disease-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+        .disease-card:hover { transform: translateY(-5px); }
+        
+        .card-icon { font-size: 40px; margin-bottom: 15px; }
+        .card-title { font-size: 22px; font-weight: 700; color: #333; margin-bottom: 10px; }
+        .card-desc { color: #666; font-size: 14px; margin-bottom: 20px; }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 15px;
+            width: 100%;
+            transition: opacity 0.3s;
+        }
+        .btn:hover { opacity: 0.9; }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal.active { display: flex; }
+        
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .modal-title { font-size: 22px; font-weight: 700; color: #333; margin-bottom: 20px; }
+        
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-size: 14px; color: #555; margin-bottom: 5px; font-weight: 500; }
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .result-box {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            display: none;
+        }
+        .result-positive { background: #ffe0e0; border: 2px solid #ff4444; }
+        .result-negative { background: #e0ffe0; border: 2px solid #44bb44; }
+        .result-title { font-size: 20px; font-weight: 700; margin-bottom: 10px; }
+        .result-confidence { font-size: 16px; color: #555; margin-bottom: 10px; }
+        .result-explanation {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 10px;
+            font-size: 14px;
+            color: #444;
+            text-align: left;
+            line-height: 1.6;
+        }
+        .explanation-title {
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 8px;
+            font-size: 15px;
+        }
+
+        .close-btn {
+            background: #ff4444;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            float: right;
+            font-size: 14px;
+        }
+
+        /* Chatbot */
+        .chatbot-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            font-size: 28px;
+            cursor: pointer;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            z-index: 999;
+        }
+
+        .chatbot-window {
+            display: none;
+            position: fixed;
+            bottom: 100px;
+            right: 30px;
+            width: 350px;
+            height: 450px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            z-index: 999;
+            flex-direction: column;
+        }
+        .chatbot-window.active { display: flex; }
+
+        .chat-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 15px 15px 0 0;
+            font-weight: 700;
+            font-size: 16px;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .message {
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-size: 14px;
+            max-width: 85%;
+            line-height: 1.5;
+        }
+        .message.bot {
+            background: #f0f0f0;
+            align-self: flex-start;
+        }
+        .message.user {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            align-self: flex-end;
+        }
+
+        .chat-input-area {
+            padding: 15px;
+            display: flex;
+            gap: 10px;
+            border-top: 1px solid #eee;
+        }
+        .chat-input-area input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        .chat-send-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .footer {
+            background: #333;
+            color: white;
+            text-align: center;
+            padding: 20px;
+            margin-top: 50px;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 10px;
+            color: #667eea;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+
+<nav class="navbar">
+    <h1>🏥 Medilife</h1>
+    <p>AI-Powered Disease Diagnosis System</p>
+</nav>
+
+<div class="hero">
+    <h2>AI Health Diagnosis</h2>
+    <p>Advanced Machine Learning + AI models to predict diseases with high accuracy</p>
+</div>
+
+<div class="container">
+    <div class="disease-grid">
+
+        <div class="disease-card">
+            <div class="card-icon">🩸</div>
+            <div class="card-title">Diabetes</div>
+            <div class="card-desc">Predict diabetes risk using glucose, BMI, age and other health parameters.</div>
+            <button class="btn" onclick="openModal('diabetes')">Check Diabetes Risk</button>
+        </div>
+
+        <div class="disease-card">
+            <div class="card-icon">🔬</div>
+            <div class="card-title">Breast Cancer</div>
+            <div class="card-desc">Detect breast cancer using cell nucleus measurements from biopsy data.</div>
+            <button class="btn" onclick="openModal('cancer')">Check Cancer Risk</button>
+        </div>
+
+        <div class="disease-card">
+            <div class="card-icon">❤️</div>
+            <div class="card-title">Heart Disease</div>
+            <div class="card-desc">Predict heart disease risk using cholesterol, blood pressure and ECG data.</div>
+            <button class="btn" onclick="openModal('heart')">Check Heart Risk</button>
+        </div>
+
+        <div class="disease-card">
+            <div class="card-icon">🫘</div>
+            <div class="card-title">Kidney Disease</div>
+            <div class="card-desc">Detect chronic kidney disease using blood and urine test parameters.</div>
+            <button class="btn" onclick="openModal('kidney')">Check Kidney Risk</button>
+        </div>
+
+    </div>
+</div>
+
+<!-- Diabetes Modal -->
+<div class="modal" id="diabetes-modal">
+    <div class="modal-content">
+        <button class="close-btn" onclick="closeModal('diabetes')">✕ Close</button>
+        <div class="modal-title">🩸 Diabetes Prediction</div>
+        <div class="form-group"><label>Pregnancies</label><input type="number" id="d-pregnancies" placeholder="0-17"></div>
+        <div class="form-group"><label>Glucose Level</label><input type="number" id="d-glucose" placeholder="0-199"></div>
+        <div class="form-group"><label>Blood Pressure</label><input type="number" id="d-bp" placeholder="0-122"></div>
+        <div class="form-group"><label>Skin Thickness</label><input type="number" id="d-skin" placeholder="0-99"></div>
+        <div class="form-group"><label>Insulin</label><input type="number" id="d-insulin" placeholder="0-846"></div>
+        <div class="form-group"><label>BMI</label><input type="number" step="0.1" id="d-bmi" placeholder="0-67"></div>
+        <div class="form-group"><label>Diabetes Pedigree Function</label><input type="number" step="0.001" id="d-dpf" placeholder="0.07-2.42"></div>
+        <div class="form-group"><label>Age</label><input type="number" id="d-age" placeholder="21-81"></div>
+        <button class="btn" onclick="predictDiabetes()">🔍 Predict</button>
+        <div class="loading" id="d-loading">🤖 AI analyzing... please wait</div>
+        <div class="result-box" id="diabetes-result"></div>
+    </div>
+</div>
+
+<!-- Heart Modal -->
+<div class="modal" id="heart-modal">
+    <div class="modal-content">
+        <button class="close-btn" onclick="closeModal('heart')">✕ Close</button>
+        <div class="modal-title">❤️ Heart Disease Prediction</div>
+        <div class="form-group"><label>Age</label><input type="number" id="h-age" placeholder="29-77"></div>
+        <div class="form-group"><label>Sex (0=Female, 1=Male)</label><input type="number" id="h-sex" placeholder="0 or 1"></div>
+        <div class="form-group"><label>Chest Pain Type (0-3)</label><input type="number" id="h-cp" placeholder="0-3"></div>
+        <div class="form-group"><label>Resting Blood Pressure</label><input type="number" id="h-trestbps" placeholder="94-200"></div>
+        <div class="form-group"><label>Cholesterol</label><input type="number" id="h-chol" placeholder="126-564"></div>
+        <div class="form-group"><label>Fasting Blood Sugar (0/1)</label><input type="number" id="h-fbs" placeholder="0 or 1"></div>
+        <div class="form-group"><label>Rest ECG (0-2)</label><input type="number" id="h-restecg" placeholder="0-2"></div>
+        <div class="form-group"><label>Max Heart Rate</label><input type="number" id="h-thalach" placeholder="71-202"></div>
+        <div class="form-group"><label>Exercise Angina (0/1)</label><input type="number" id="h-exang" placeholder="0 or 1"></div>
+        <div class="form-group"><label>Oldpeak</label><input type="number" step="0.1" id="h-oldpeak" placeholder="0-6.2"></div>
+        <div class="form-group"><label>Slope (0-2)</label><input type="number" id="h-slope" placeholder="0-2"></div>
+        <div class="form-group"><label>CA (0-3)</label><input type="number" id="h-ca" placeholder="0-3"></div>
+        <div class="form-group"><label>Thal (0-3)</label><input type="number" id="h-thal" placeholder="0-3"></div>
+        <button class="btn" onclick="predictHeart()">🔍 Predict</button>
+        <div class="loading" id="h-loading">🤖 AI analyzing... please wait</div>
+        <div class="result-box" id="heart-result"></div>
+    </div>
+</div>
+
+<!-- Kidney Modal -->
+<div class="modal" id="kidney-modal">
+    <div class="modal-content">
+        <button class="close-btn" onclick="closeModal('kidney')">✕ Close</button>
+        <div class="modal-title">🫘 Kidney Disease Prediction</div>
+        <div class="form-group"><label>Age</label><input type="number" id="k-age" placeholder="2-90"></div>
+        <div class="form-group"><label>Blood Pressure</label><input type="number" id="k-bp" placeholder="50-180"></div>
+        <div class="form-group"><label>Specific Gravity</label><input type="number" step="0.001" id="k-sg" placeholder="1.005-1.025"></div>
+        <div class="form-group"><label>Albumin (0-4)</label><input type="number" id="k-al" placeholder="0-4"></div>
+        <div class="form-group"><label>Sugar (0-4)</label><input type="number" id="k-su" placeholder="0-4"></div>
+        <div class="form-group"><label>RBC (0=abnormal, 1=normal)</label><input type="number" id="k-rbc" placeholder="0 or 1"></div>
+        <div class="form-group"><label>Pus Cell (0=abnormal, 1=normal)</label><input type="number" id="k-pc" placeholder="0 or 1"></div>
+        <div class="form-group"><label>Pus Cell Clumps (0=notpresent, 1=present)</label><input type="number" id="k-pcc" placeholder="0 or 1"></div>
+        <div class="form-group"><label>Bacteria (0=notpresent, 1=present)</label><input type="number" id="k-ba" placeholder="0 or 1"></div>
+        <div class="form-group"><label>Blood Glucose Random</label><input type="number" id="k-bgr" placeholder="70-490"></div>
+        <div class="form-group"><label>Blood Urea</label><input type="number" id="k-bu" placeholder="10-310"></div>
+        <div class="form-group"><label>Serum Creatinine</label><input type="number" step="0.1" id="k-sc" placeholder="0.4-76"></div>
+        <div class="form-group"><label>Hemoglobin</label><input type="number" step="0.1" id="k-hemo" placeholder="3.1-17.8"></div>
+        <button class="btn" onclick="predictKidney()">🔍 Predict</button>
+        <div class="loading" id="k-loading">🤖 AI analyzing... please wait</div>
+        <div class="result-box" id="kidney-result"></div>
+    </div>
+</div>
+
+<!-- Cancer Modal -->
+<div class="modal" id="cancer-modal">
+    <div class="modal-content">
+        <button class="close-btn" onclick="closeModal('cancer')">✕ Close</button>
+        <div class="modal-title">🔬 Cancer Prediction</div>
+        <div class="form-group"><label>Mean Radius</label><input type="number" step="0.01" id="c-radius" placeholder="e.g. 14.5"></div>
+        <div class="form-group"><label>Mean Texture</label><input type="number" step="0.01" id="c-texture" placeholder="e.g. 19.0"></div>
+        <div class="form-group"><label>Mean Perimeter</label><input type="number" step="0.01" id="c-perimeter" placeholder="e.g. 92.0"></div>
+        <div class="form-group"><label>Mean Area</label><input type="number" step="0.01" id="c-area" placeholder="e.g. 650.0"></div>
+        <div class="form-group"><label>Mean Smoothness</label><input type="number" step="0.001" id="c-smoothness" placeholder="e.g. 0.096"></div>
+        <button class="btn" onclick="predictCancer()">🔍 Predict</button>
+        <div class="loading" id="c-loading">🤖 AI analyzing... please wait</div>
+        <div class="result-box" id="cancer-result"></div>
+    </div>
+</div>
+
+<!-- Chatbot Button -->
+<button class="chatbot-btn" onclick="toggleChat()">🤖</button>
+
+<!-- Chatbot Window -->
+<div class="chatbot-window" id="chatbot-window">
+    <div class="chat-header">🤖 Medilife AI Assistant</div>
+    <div class="chat-messages" id="chat-messages">
+        <div class="message bot">Hello! I am Medilife AI Assistant. Ask me anything about diseases, symptoms or health! 😊</div>
+    </div>
+    <div class="chat-input-area">
+        <input type="text" id="chat-input" placeholder="Ask a health question..." onkeypress="handleEnter(event)">
+        <button class="chat-send-btn" onclick="sendMessage()">➤</button>
+    </div>
+</div>
+
+<div class="footer">
+    <p>🏥 Medilife — AI Disease Diagnosis System | Built by Sai Mogal</p>
+    <p style="margin-top:8px; opacity:0.7; font-size:13px;">⚠️ This is an AI tool — Always consult a doctor for medical advice</p>
+</div>
+
+<script>
+function openModal(disease) {
+    document.getElementById(disease + '-modal').classList.add('active');
+}
+function closeModal(disease) {
+    document.getElementById(disease + '-modal').classList.remove('active');
+}
+
+function toggleChat() {
+    document.getElementById('chatbot-window').classList.toggle('active');
+}
+
+function handleEnter(e) {
+    if (e.key === 'Enter') sendMessage();
+}
+
+function showResult(id, prediction, confidence, explanation) {
+    const box = document.getElementById(id);
+    box.style.display = 'block';
+    const isPositive = prediction.toLowerCase().includes('detected') || prediction.toLowerCase().includes('malignant');
+    box.className = 'result-box ' + (isPositive ? 'result-positive' : 'result-negative');
+    box.innerHTML = `
+        <div class="result-title">${isPositive ? '⚠️' : '✅'} ${prediction}</div>
+        <div class="result-confidence">Confidence: ${confidence}%</div>
+        <div class="result-explanation">
+            <div class="explanation-title">🤖 AI Explanation:</div>
+            ${explanation}
+        </div>
+    `;
+}
+
+async function predictDiabetes() {
+    document.getElementById('d-loading').style.display = 'block';
+    const data = {
+        pregnancies: parseFloat(document.getElementById('d-pregnancies').value),
+        glucose: parseFloat(document.getElementById('d-glucose').value),
+        blood_pressure: parseFloat(document.getElementById('d-bp').value),
+        skin_thickness: parseFloat(document.getElementById('d-skin').value),
+        insulin: parseFloat(document.getElementById('d-insulin').value),
+        bmi: parseFloat(document.getElementById('d-bmi').value),
+        diabetes_pedigree: parseFloat(document.getElementById('d-dpf').value),
+        age: parseFloat(document.getElementById('d-age').value)
+    };
+    const res = await fetch('/predict/diabetes', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    });
+    const result = await res.json();
+    document.getElementById('d-loading').style.display = 'none';
+    showResult('diabetes-result', result.prediction, result.confidence, result.explanation);
+}
+
+async function predictHeart() {
+    document.getElementById('h-loading').style.display = 'block';
+    const data = {
+        age: parseFloat(document.getElementById('h-age').value),
+        sex: parseFloat(document.getElementById('h-sex').value),
+        cp: parseFloat(document.getElementById('h-cp').value),
+        trestbps: parseFloat(document.getElementById('h-trestbps').value),
+        chol: parseFloat(document.getElementById('h-chol').value),
+        fbs: parseFloat(document.getElementById('h-fbs').value),
+        restecg: parseFloat(document.getElementById('h-restecg').value),
+        thalach: parseFloat(document.getElementById('h-thalach').value),
+        exang: parseFloat(document.getElementById('h-exang').value),
+        oldpeak: parseFloat(document.getElementById('h-oldpeak').value),
+        slope: parseFloat(document.getElementById('h-slope').value),
+        ca: parseFloat(document.getElementById('h-ca').value),
+        thal: parseFloat(document.getElementById('h-thal').value)
+    };
+    const res = await fetch('/predict/heart', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    });
+    const result = await res.json();
+    document.getElementById('h-loading').style.display = 'none';
+    showResult('heart-result', result.prediction, result.confidence, result.explanation);
+}
+
+async function predictKidney() {
+    document.getElementById('k-loading').style.display = 'block';
+    const data = {
+        age: parseFloat(document.getElementById('k-age').value),
+        bp: parseFloat(document.getElementById('k-bp').value),
+        sg: parseFloat(document.getElementById('k-sg').value),
+        al: parseFloat(document.getElementById('k-al').value),
+        su: parseFloat(document.getElementById('k-su').value),
+        rbc: parseFloat(document.getElementById('k-rbc').value),
+        pc: parseFloat(document.getElementById('k-pc').value),
+        pcc: parseFloat(document.getElementById('k-pcc').value),
+        ba: parseFloat(document.getElementById('k-ba').value),
+        bgr: parseFloat(document.getElementById('k-bgr').value),
+        bu: parseFloat(document.getElementById('k-bu').value),
+        sc: parseFloat(document.getElementById('k-sc').value),
+        hemo: parseFloat(document.getElementById('k-hemo').value)
+    };
+    const res = await fetch('/predict/kidney', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    });
+    const result = await res.json();
+    document.getElementById('k-loading').style.display = 'none';
+    showResult('kidney-result', result.prediction, result.confidence, result.explanation);
+}
+
+async function predictCancer() {
+    document.getElementById('c-loading').style.display = 'block';
+    const data = {
+        mean_radius: parseFloat(document.getElementById('c-radius').value),
+        mean_texture: parseFloat(document.getElementById('c-texture').value),
+        mean_perimeter: parseFloat(document.getElementById('c-perimeter').value),
+        mean_area: parseFloat(document.getElementById('c-area').value),
+        mean_smoothness: parseFloat(document.getElementById('c-smoothness').value)
+    };
+    const res = await fetch('/predict/cancer', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    });
+    const result = await res.json();
+    document.getElementById('c-loading').style.display = 'none';
+    showResult('cancer-result', result.prediction, result.confidence, result.explanation);
+}
+
+async function sendMessage() {
+    const input = document.getElementById('chat-input');
+    const message = input.value.trim();
+    if (!message) return;
+
+    const messagesDiv = document.getElementById('chat-messages');
+    messagesDiv.innerHTML += `<div class="message user">${message}</div>`;
+    input.value = '';
+    messagesDiv.innerHTML += `<div class="message bot" id="typing">🤖 typing...</div>`;
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+    const res = await fetch('/chat', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({message: message})
+    });
+    const result = await res.json();
+    
+    document.getElementById('typing').remove();
+    messagesDiv.innerHTML += `<div class="message bot">${result.reply}</div>`;
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+</script>
+
+</body>
+</html>
